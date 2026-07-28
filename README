@@ -1,40 +1,46 @@
 # GWC Template Extension — Installation Guide
+
 Made by Cindy Ngo :)
 
 ---
 
 ## Installation Steps
 
-1. **Download & Unzip**  
-   Download the extension ZIP file and unzip it.  
+1. **Download & Unzip**
+
+   Download the extension ZIP file and unzip it.
 
 2. **Choose your Manifest**
-   Inside the unzipped folder, you’ll see:
+
+   Inside the unzipped folder, you'll see:
    - manifest.chrome.json
    - manifest.firefox.json
+
    Before loading the extension, **rename** the one for your browser to `manifest.json`:
 
-3. **Load Extension in Browser**  
+3. **Load Extension in Browser**
+
    - Chrome
-      - Open Chrome and go to: `chrome://extensions/`  
-      - Enable **Developer Mode** (toggle switch in the top right)  
-      - Click **Load unpacked** and select the `gwc-template-extension` folder from your unzipped files
+     - Open Chrome and go to: `chrome://extensions/`
+     - Enable **Developer Mode** (toggle switch in the top right)
+     - Click **Load unpacked** and select the `gwc-template-extension` folder from your unzipped files
    - Firefox (WORK IN PROGRESS)
 
-4. **Pin the Extension**  
-   - Click the puzzle icon in the Chrome toolbar  
-   - Find the GWC Template Extension and click the pin icon to keep it visible  
+4. **Pin the Extension**
+
+   - Click the puzzle icon in the Chrome toolbar
+   - Find the GWC Template Extension and click the pin icon to keep it visible
 
 ---
 
 ## Troubleshooting
 
-If Chrome doesn’t allow you to install the extension or you encounter issues, try this:
+If Chrome doesn't allow you to install the extension or you encounter issues, try this:
 
-1. Go to `chrome://flags/`  
-2. Search for **Allow legacy extension manifest versions**  
-3. Set it to **Enabled**  
-4. Restart Chrome (optional)  
+1. Go to `chrome://flags/`
+2. Search for **Allow legacy extension manifest versions**
+3. Set it to **Enabled**
+4. Restart Chrome (optional)
 5. Try reinstalling the extension again!
 
 ---
