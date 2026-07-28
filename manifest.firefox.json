@@ -1,0 +1,40 @@
+{
+  "manifest_version": 2,
+  "name": "GWC Discord Template Copier",
+  "description": "Easily copy Role Assignment responses :)",
+  "version": "2.0",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "https://docs.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://hq.girlswhocode.com/*"],
+      "js": ["/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "/icons/gwc16.png",
+      "48": "/icons/gwc48.png",
+      "128": "/icons/gwc128.png"
+    }
+  },
+  "icons": {
+    "16": "/icons/gwc16.png",
+    "48": "/icons/gwc48.png",
+    "128": "/icons/gwc128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gwc-template-copier@example.com",
+      "strict_min_version": "79.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}
