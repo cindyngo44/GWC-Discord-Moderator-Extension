@@ -16,7 +16,7 @@ Made by Cindy Ngo :)
    - manifest.chrome.json
    - manifest.firefox.json
 
-   Before loading the extension, **rename** the one for your browser to `manifest.json`:
+   Before loading the extension, **rename** the manifest file that matches your browser to `manifest.json`:
 
 3. **Load Extension in Browser**
 
