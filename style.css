@@ -106,7 +106,7 @@ input, select {
 
 .tab-btn {
   flex: 1;
-  padding: 8px;
+  padding: 5px;
   border: none;
   background: var(--tab-bg);
   color: var(--tab-text);
