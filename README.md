@@ -10,7 +10,11 @@ Made by Cindy Ngo :)
 
    Download the extension ZIP file and unzip it.
 
-2. **Choose your Manifest**
+2. **Add the config.js**
+
+   Move your `config.js` file over into the GWC-Discord-Moderator-Extension folder containing all extension files
+
+3. **Choose your Manifest**
 
    Inside the unzipped folder, you'll see:
    - manifest.chrome.json
@@ -18,7 +22,7 @@ Made by Cindy Ngo :)
 
    Before loading the extension, **rename** the manifest file that matches your browser to `manifest.json`:
 
-3. **Load Extension in Browser**
+4. **Load Extension in Browser**
 
    - Chrome
      - Open Chrome and go to: `chrome://extensions/`
@@ -26,7 +30,7 @@ Made by Cindy Ngo :)
      - Click **Load unpacked** and select the `gwc-template-extension` folder from your unzipped files
    - Firefox (WORK IN PROGRESS)
 
-4. **Pin the Extension**
+5. **Pin the Extension**
 
    - Click the puzzle icon in the Chrome toolbar
    - Find the GWC Template Extension and click the pin icon to keep it visible
