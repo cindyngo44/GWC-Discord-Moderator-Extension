@@ -12,9 +12,10 @@ const SHEET_URL =
 // TEMPLATE DATA
 // =========================
 
-let templates = [];
-let discordTemplates = [];
-let emailTemplates = [];
+// Instead of three fixed arrays, we now keep one object keyed by
+// whatever category strings show up in the sheet, e.g.:
+// { "role assignment": [...], "discord message": [...], "email": [...], "new category": [...] }
+let categorizedTemplates = {};
 
 
 // =========================
@@ -22,8 +23,6 @@ let emailTemplates = [];
 // =========================
 
 document.addEventListener("DOMContentLoaded", async () => {
-
-  setupTabs();
 
   setupThemeToggle();
 
@@ -35,20 +34,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await loadAllTemplates();
 
-    renderTemplates(
-      templates,
-      "role-assignment-templates"
-    );
+    buildCategoryUI(categorizedTemplates);
 
-    renderTemplates(
-      discordTemplates,
-      "discord-message-templates"
-    );
-
-    renderTemplates(
-      emailTemplates,
-      "email-templates"
-    );
+    renderAllTemplates();
 
   } catch (error) {
 
@@ -61,24 +49,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (cached) {
 
-      templates = cached.templates;
-      discordTemplates = cached.discordTemplates;
-      emailTemplates = cached.emailTemplates;
+      categorizedTemplates = cached.categorizedTemplates;
 
-      renderTemplates(
-        templates,
-        "role-assignment-templates"
-      );
+      buildCategoryUI(categorizedTemplates);
 
-      renderTemplates(
-        discordTemplates,
-        "discord-message-templates"
-      );
-
-      renderTemplates(
-        emailTemplates,
-        "email-templates"
-      );
+      renderAllTemplates();
 
       showToast(
         "Showing cached templates"
@@ -91,17 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       document.getElementById(
-        "role-assignment-templates"
-      ).innerHTML =
-        "<p>Could not load templates.</p>";
-
-      document.getElementById(
-        "discord-message-templates"
-      ).innerHTML =
-        "<p>Could not load templates.</p>";
-
-      document.getElementById(
-        "email-templates"
+        "tab-content-container"
       ).innerHTML =
         "<p>Could not load templates.</p>";
     }
@@ -250,31 +215,17 @@ async function loadAllTemplates() {
   const cached = await getCachedTemplates();
 
   if (cached) {
-    templates = cached.templates;
-    discordTemplates = cached.discordTemplates;
-    emailTemplates = cached.emailTemplates;
+    categorizedTemplates = cached.categorizedTemplates;
     return;
   }
 
   const allRows = await loadSheet(SHEET_URL);
 
-  templates = allRows.filter(
-    row => row.category === "role assignment"
-  );
-
-  discordTemplates = allRows.filter(
-    row => row.category === "discord message"
-  );
-
-  emailTemplates = allRows.filter(
-    row => row.category === "email"
-  );
+  categorizedTemplates = groupByCategory(allRows);
 
   chrome.storage.local.set({
     templateCache: {
-      templates,
-      discordTemplates,
-      emailTemplates,
+      categorizedTemplates,
       timestamp: Date.now()
     }
   });
@@ -291,6 +242,31 @@ function getCachedTemplates() {
       }
     });
   });
+}
+
+
+// =========================
+// GROUP ROWS BY CATEGORY
+// =========================
+
+function groupByCategory(rows) {
+
+  const grouped = {};
+
+  rows.forEach((row) => {
+
+    const category =
+      row.category ||
+      "uncategorized";
+
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
+
+    grouped[category].push(row);
+  });
+
+  return grouped;
 }
 
 
@@ -333,7 +309,7 @@ async function loadSheet(url) {
 
 
 // =========================
-// CSV PARSER (now also reads Category)
+// CSV PARSER (reads Category, Title, Message)
 // =========================
 
 function parseCSV(csvText) {
@@ -527,6 +503,152 @@ function parseCSV(csvText) {
 
 
 // =========================
+// BUILD TABS + CONTENT PANELS FROM CATEGORIES
+// =========================
+
+function buildCategoryUI(categorizedTemplates) {
+
+  const tabsContainer =
+    document.getElementById(
+      "tabs-container"
+    );
+
+  const contentContainer =
+    document.getElementById(
+      "tab-content-container"
+    );
+
+  if (!tabsContainer || !contentContainer) {
+    return;
+  }
+
+  tabsContainer.innerHTML = "";
+  contentContainer.innerHTML = "";
+
+  const categoryNames =
+    Object.keys(categorizedTemplates);
+
+  if (categoryNames.length === 0) {
+    contentContainer.innerHTML =
+      "<p>No templates found.</p>";
+    return;
+  }
+
+  categoryNames.forEach(
+    (category, index) => {
+
+      const tabId =
+        slugify(category);
+
+      // --- Tab button ---
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      button.className =
+        "tab-btn" +
+        (index === 0 ? " active" : "");
+
+      button.dataset.tab = tabId;
+
+      button.textContent =
+        toTitleCase(category);
+
+      tabsContainer.appendChild(
+        button
+      );
+
+      // --- Tab content panel ---
+      const contentDiv =
+        document.createElement(
+          "div"
+        );
+
+      contentDiv.className =
+        "tab-content" +
+        (index === 0 ? " active" : "");
+
+      contentDiv.id = tabId;
+
+      const section =
+        document.createElement(
+          "div"
+        );
+
+      section.className =
+        "section";
+
+      const label =
+        document.createElement(
+          "label"
+        );
+
+      label.textContent =
+        toTitleCase(category) +
+        " Templates:";
+
+      const listContainer =
+        document.createElement(
+          "div"
+        );
+
+      listContainer.id =
+        tabId + "-templates";
+
+      section.appendChild(label);
+      section.appendChild(listContainer);
+      contentDiv.appendChild(section);
+      contentContainer.appendChild(contentDiv);
+    }
+  );
+
+  setupTabs();
+}
+
+function slugify(text) {
+  return (text || "uncategorized")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "uncategorized";
+}
+
+function toTitleCase(text) {
+  return (text || "Uncategorized").replace(
+    /\w\S*/g,
+    (word) =>
+      word.charAt(0).toUpperCase() +
+      word.slice(1)
+  );
+}
+
+
+// =========================
+// RENDER ALL CATEGORIES
+// =========================
+
+function renderAllTemplates() {
+
+  Object.entries(
+    categorizedTemplates
+  ).forEach(
+    ([category, list]) => {
+
+      const containerId =
+        slugify(category) +
+        "-templates";
+
+      renderTemplates(
+        list,
+        containerId
+      );
+    }
+  );
+}
+
+
+// =========================
 // RENDER TEMPLATE CARDS
 // =========================
 
@@ -647,7 +769,10 @@ function renderTemplates(
   );
 
 
-  updateAllPreviews();
+  updatePreviewsForContainer(
+    templateList,
+    containerId
+  );
 }
 
 
@@ -718,58 +843,49 @@ function autoDetectStudentName() {
 
 
 // =========================
-// UPDATE ALL PREVIEWS
+// UPDATE ALL PREVIEWS (all categories)
 // =========================
 
 function updateAllPreviews() {
 
-  const name =
-    document.getElementById(
-      "studentName"
-    )?.value || "";
+  Object.entries(
+    categorizedTemplates
+  ).forEach(
+    ([category, list]) => {
 
+      const containerId =
+        slugify(category) +
+        "-templates";
 
-  const email =
-    document.getElementById(
-      "modEmail"
-    )?.value || "";
-
-
-  updatePreviews(
-    templates,
-    "role-assignment-templates",
-    name,
-    email
-  );
-
-
-  updatePreviews(
-    discordTemplates,
-    "discord-message-templates",
-    name,
-    email
-  );
-
-
-  updatePreviews(
-    emailTemplates,
-    "email-templates",
-    name,
-    email
+      updatePreviewsForContainer(
+        list,
+        containerId
+      );
+    }
   );
 }
 
 
 // =========================
-// UPDATE TEMPLATE PREVIEWS
+// UPDATE TEMPLATE PREVIEWS (one category)
 // =========================
 
-function updatePreviews(
+function updatePreviewsForContainer(
   templateList,
-  containerId,
-  studentName,
-  modEmail
+  containerId
 ) {
+
+  const studentName =
+    document.getElementById(
+      "studentName"
+    )?.value || "";
+
+
+  const modEmail =
+    document.getElementById(
+      "modEmail"
+    )?.value || "";
+
 
   const container =
     document.getElementById(

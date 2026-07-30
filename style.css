@@ -34,7 +34,7 @@ body {
   padding: 12px;
   background-color: var(--bg);
   color: var(--text);
-  width: 320px;
+  width: 400px;
   transition: background-color 0.2s, color 0.2s;
 }
 
@@ -111,6 +111,7 @@ input, select {
   background: var(--tab-bg);
   color: var(--tab-text);
   cursor: pointer;
+  font-size: 12px;
   font-weight: bold;
   border-radius: 5px 5px 0 0;
   transition: background 0.2s;
@@ -151,6 +152,7 @@ input, select {
   font-size: 12px;
   color: var(--preview-text);
   margin-bottom: 6px;
+  overflow: auto;
 }
 
 .buttons {
