@@ -1,16 +1,3 @@
-// =========================
-// STAGE 3: OPEN BOX + CLICK IN + PASTE TEXT
-// =========================
-//
-// Injected on demand via chrome.scripting.executeScript.
-// Builds on the working Stage 1 (open box) and Stage 2 (click into it,
-// confirmed focused) by dispatching a real 'paste' ClipboardEvent with
-// the template text. Draft.js has its own built-in paste handler
-// (handlePastedText) that listens for exactly this — it's the same
-// mechanism it uses when you Ctrl+V real clipboard content, so it
-// updates Draft's internal state correctly instead of getting
-// overwritten on next render.
-
 if (!window.__gwcPasteTemplate) {
 
   window.__gwcPasteTemplate = async function (text) {
@@ -28,11 +15,6 @@ if (!window.__gwcPasteTemplate) {
       pasted
     };
   };
-
-
-  // =========================
-  // FIND THE "ADD COMMENTS" BUTTON
-  // =========================
 
   function findAddCommentsButton() {
 
@@ -57,10 +39,6 @@ if (!window.__gwcPasteTemplate) {
     return matches[0] || null;
   }
 
-
-  // =========================
-  // FIND / WAIT FOR THE DRAFT.JS EDITOR
-  // =========================
 
   function findDraftEditor() {
 
@@ -110,11 +88,6 @@ if (!window.__gwcPasteTemplate) {
     });
   }
 
-
-  // =========================
-  // OPEN THE COMMENT EDITOR
-  // =========================
-
   async function openCommentEditor() {
 
     const existingEditor = findDraftEditor();
@@ -137,11 +110,6 @@ if (!window.__gwcPasteTemplate) {
 
     return waitForDraftEditor();
   }
-
-
-  // =========================
-  // CLICK INTO THE EDITOR (real click + focus)
-  // =========================
 
   function clickInto(editor) {
 
@@ -177,16 +145,6 @@ if (!window.__gwcPasteTemplate) {
       document.activeElement === editor
     );
   }
-
-
-  // =========================
-  // DISPATCH A PASTE EVENT WITH THE TEMPLATE TEXT
-  // =========================
-  //
-  // Draft.js listens for native 'paste' events on the editable root and
-  // reads clipboardData itself — it doesn't care that this event was
-  // constructed by us rather than a real Ctrl+V (isTrusted is false,
-  // but Draft.js doesn't check that).
 
   function dispatchPaste(editor, text) {
 

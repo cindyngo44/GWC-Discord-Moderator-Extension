@@ -11,10 +11,6 @@ const SHEET_URL =
 // =========================
 // TEMPLATE DATA
 // =========================
-
-// Instead of three fixed arrays, we now keep one object keyed by
-// whatever category strings show up in the sheet, e.g.:
-// { "role assignment": [...], "discord message": [...], "email": [...], "new category": [...] }
 let categorizedTemplates = {};
 let categoryOrder = [];
 
@@ -223,8 +219,6 @@ async function loadAllTemplates() {
 
   const allRows = await loadSheet(SHEET_URL);
 
-  // TEMP DEBUG — check what order the CSV actually comes back in.
-  // Remove once you've confirmed the source of the ordering.
   console.log(
     "Raw category order from CSV:",
     allRows.map(row => row.category)
@@ -320,7 +314,7 @@ async function loadSheet(url) {
 
 
 // =========================
-// CSV PARSER (reads Category, Title, Message)
+// CSV PARSER
 // =========================
 
 function parseCSV(csvText) {
@@ -421,9 +415,6 @@ function parseCSV(csvText) {
     }
   }
 
-
-  // Add final value
-
   if (
     currentValue !== "" ||
     row.length > 0
@@ -471,8 +462,6 @@ function parseCSV(csvText) {
       "message"
     );
 
-  // Optional column — lets you control tab order independent
-  // of where rows fall in the sheet. Not required.
   const orderIndex =
     headers.indexOf(
       "order"
@@ -531,8 +520,6 @@ function parseCSV(csvText) {
 
 function getCategoryOrder(rows, categorizedTemplates) {
 
-  // Default: order categories appear in the sheet (insertion order
-  // is preserved by groupByCategory since it walks rows top to bottom).
   const categoryNames =
     Object.keys(categorizedTemplates);
 
@@ -567,8 +554,6 @@ function getCategoryOrder(rows, categorizedTemplates) {
     }
   });
 
-  // Categories without any Order value keep their sheet-appearance
-  // position, sorted after any explicitly ordered ones.
   return categoryNames
     .slice()
     .sort((a, b) => {
@@ -631,7 +616,6 @@ function buildCategoryUI(categorizedTemplates, categoryOrder) {
       const tabId =
         slugify(category);
 
-      // --- Tab button ---
       const button =
         document.createElement(
           "button"
@@ -650,7 +634,6 @@ function buildCategoryUI(categorizedTemplates, categoryOrder) {
         button
       );
 
-      // --- Tab content panel ---
       const contentDiv =
         document.createElement(
           "div"
@@ -841,9 +824,6 @@ function renderTemplates(
         copyButton
       );
 
-
-      // Only role-assignment templates get the one-click paste button —
-      // the "Add comments" / Draft.js flow only makes sense there.
       if (
         category === "role assignment"
       ) {
@@ -969,7 +949,7 @@ function autoDetectStudentName() {
 
 
 // =========================
-// UPDATE ALL PREVIEWS (all categories)
+// UPDATE ALL PREVIEWS
 // =========================
 
 function updateAllPreviews() {
@@ -993,7 +973,7 @@ function updateAllPreviews() {
 
 
 // =========================
-// UPDATE TEMPLATE PREVIEWS (one category)
+// UPDATE TEMPLATE PREVIEWS
 // =========================
 
 function updatePreviewsForContainer(
@@ -1130,14 +1110,8 @@ function copyTemplate(
 
 
 // =========================
-// PASTE TEMPLATE TO PAGE (role assignment only)
+// PASTE TEMPLATE TO PAGE
 // =========================
-//
-// Resolves placeholders, then injects pasteToComments.js into the active
-// tab and calls the function it exposes: opens the comment box if
-// needed, clicks into it for real focus, then dispatches a paste event
-// with the resolved text so Draft.js picks it up through its own paste
-// handler.
 
 async function pasteTemplateToPage(
   message
