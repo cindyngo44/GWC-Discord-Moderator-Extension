@@ -1181,12 +1181,7 @@ async function pasteTemplateToPage(
       showToast(
         "Pasted to comments!"
       );
-    } else {
-      showToast(
-        "Could not paste template"
-      );
-    }
-
+    } 
   } catch (error) {
 
     console.error(
