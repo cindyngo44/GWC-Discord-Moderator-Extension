@@ -16,6 +16,7 @@ const SHEET_URL =
 // whatever category strings show up in the sheet, e.g.:
 // { "role assignment": [...], "discord message": [...], "email": [...], "new category": [...] }
 let categorizedTemplates = {};
+let categoryOrder = [];
 
 
 // =========================
@@ -34,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await loadAllTemplates();
 
-    buildCategoryUI(categorizedTemplates);
+    buildCategoryUI(categorizedTemplates, categoryOrder);
 
     renderAllTemplates();
 
@@ -51,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       categorizedTemplates = cached.categorizedTemplates;
 
-      buildCategoryUI(categorizedTemplates);
+      buildCategoryUI(categorizedTemplates, categoryOrder);
 
       renderAllTemplates();
 
@@ -216,16 +217,26 @@ async function loadAllTemplates() {
 
   if (cached) {
     categorizedTemplates = cached.categorizedTemplates;
+    categoryOrder = cached.categoryOrder;
     return;
   }
 
   const allRows = await loadSheet(SHEET_URL);
 
+  // TEMP DEBUG — check what order the CSV actually comes back in.
+  // Remove once you've confirmed the source of the ordering.
+  console.log(
+    "Raw category order from CSV:",
+    allRows.map(row => row.category)
+  );
+
   categorizedTemplates = groupByCategory(allRows);
+  categoryOrder = getCategoryOrder(allRows, categorizedTemplates);
 
   chrome.storage.local.set({
     templateCache: {
       categorizedTemplates,
+      categoryOrder,
       timestamp: Date.now()
     }
   });
@@ -460,6 +471,13 @@ function parseCSV(csvText) {
       "message"
     );
 
+  // Optional column — lets you control tab order independent
+  // of where rows fall in the sheet. Not required.
+  const orderIndex =
+    headers.indexOf(
+      "order"
+    );
+
 
   if (
     categoryIndex === -1 ||
@@ -496,9 +514,80 @@ function parseCSV(csvText) {
 
         message:
           row[messageIndex]
-            .trim()
+            .trim(),
+
+        order:
+          orderIndex !== -1
+            ? (row[orderIndex] || "").trim()
+            : undefined
       })
     );
+}
+
+
+// =========================
+// DETERMINE CATEGORY (TAB) ORDER
+// =========================
+
+function getCategoryOrder(rows, categorizedTemplates) {
+
+  // Default: order categories appear in the sheet (insertion order
+  // is preserved by groupByCategory since it walks rows top to bottom).
+  const categoryNames =
+    Object.keys(categorizedTemplates);
+
+  const hasExplicitOrder =
+    rows.some(
+      row =>
+        row.order !== undefined &&
+        row.order !== ""
+    );
+
+  if (!hasExplicitOrder) {
+    return categoryNames;
+  }
+
+  // Use the first numeric Order value found for each category.
+  const orderMap = {};
+
+  rows.forEach(row => {
+
+    const category =
+      row.category ||
+      "uncategorized";
+
+    const orderValue =
+      parseFloat(row.order);
+
+    if (
+      !Number.isNaN(orderValue) &&
+      orderMap[category] === undefined
+    ) {
+      orderMap[category] = orderValue;
+    }
+  });
+
+  // Categories without any Order value keep their sheet-appearance
+  // position, sorted after any explicitly ordered ones.
+  return categoryNames
+    .slice()
+    .sort((a, b) => {
+
+      const orderA =
+        orderMap[a] ?? Infinity;
+
+      const orderB =
+        orderMap[b] ?? Infinity;
+
+      if (orderA === orderB) {
+        return (
+          categoryNames.indexOf(a) -
+          categoryNames.indexOf(b)
+        );
+      }
+
+      return orderA - orderB;
+    });
 }
 
 
@@ -506,7 +595,7 @@ function parseCSV(csvText) {
 // BUILD TABS + CONTENT PANELS FROM CATEGORIES
 // =========================
 
-function buildCategoryUI(categorizedTemplates) {
+function buildCategoryUI(categorizedTemplates, categoryOrder) {
 
   const tabsContainer =
     document.getElementById(
@@ -526,7 +615,9 @@ function buildCategoryUI(categorizedTemplates) {
   contentContainer.innerHTML = "";
 
   const categoryNames =
-    Object.keys(categorizedTemplates);
+    categoryOrder && categoryOrder.length
+      ? categoryOrder
+      : Object.keys(categorizedTemplates);
 
   if (categoryNames.length === 0) {
     contentContainer.innerHTML =
@@ -641,7 +732,8 @@ function renderAllTemplates() {
 
       renderTemplates(
         list,
-        containerId
+        containerId,
+        category
       );
     }
   );
@@ -654,7 +746,8 @@ function renderAllTemplates() {
 
 function renderTemplates(
   templateList,
-  containerId
+  containerId,
+  category
 ) {
 
   const container =
@@ -747,6 +840,39 @@ function renderTemplates(
       buttons.appendChild(
         copyButton
       );
+
+
+      // Only role-assignment templates get the one-click paste button —
+      // the "Add comments" / Draft.js flow only makes sense there.
+      if (
+        category === "role assignment"
+      ) {
+
+        const pasteButton =
+          document.createElement(
+            "button"
+          );
+
+        pasteButton.className =
+          "paste-btn";
+
+        pasteButton.textContent =
+          "Paste to Comments";
+
+        pasteButton.addEventListener(
+          "click",
+          () => {
+
+            pasteTemplateToPage(
+              template.message
+            );
+          }
+        );
+
+        buttons.appendChild(
+          pasteButton
+        );
+      }
 
 
       card.appendChild(
@@ -1000,6 +1126,104 @@ function copyTemplate(
         );
       }
     );
+}
+
+
+// =========================
+// PASTE TEMPLATE TO PAGE (role assignment only)
+// =========================
+//
+// Resolves placeholders, then injects pasteToComments.js into the active
+// tab and calls the function it exposes: opens the comment box if
+// needed, clicks into it for real focus, then dispatches a paste event
+// with the resolved text so Draft.js picks it up through its own paste
+// handler.
+
+async function pasteTemplateToPage(
+  message
+) {
+
+  const studentName =
+    document.getElementById(
+      "studentName"
+    )?.value ||
+    "STUDENTNAME";
+
+  const modEmail =
+    document.getElementById(
+      "modEmail"
+    )?.value ||
+    "MODEMAIL";
+
+  const text =
+    replacePlaceholders(
+      message,
+      studentName,
+      modEmail
+    );
+
+  try {
+
+    const [tab] =
+      await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      });
+
+    if (!tab) {
+      showToast(
+        "No active tab found"
+      );
+      return;
+    }
+
+    await chrome.scripting.executeScript(
+      {
+        target: { tabId: tab.id },
+        files: [
+          "pasteToComments.js"
+        ]
+      }
+    );
+
+    const [injectionResult] =
+      await chrome.scripting.executeScript(
+        {
+          target: { tabId: tab.id },
+          func: (templateText) =>
+            window.__gwcPasteTemplate(
+              templateText
+            ),
+          args: [text]
+        }
+      );
+
+    console.log(
+      "Paste result:",
+      injectionResult?.result
+    );
+
+    if (injectionResult?.result?.pasted) {
+      showToast(
+        "Pasted to comments!"
+      );
+    } else {
+      showToast(
+        "Could not paste template"
+      );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Paste to page failed:",
+      error
+    );
+
+    showToast(
+      "Could not paste template"
+    );
+  }
 }
 
 
